@@ -178,7 +178,7 @@ public class CopyPaste implements ActionListener{
 			for(int j = 0; j < colsToCopy.length; j++) {
 				Object value = myJTable.getValueAt(rowsToCopy[i], colsToCopy[j]);
 				if(value != null) {
-					stringBuffer.append(value);
+					stringBuffer.append(value.toString().replaceAll("[\t\r\n]", " "));
 				}
 				if(j != colsToCopy.length - 1) {
 					stringBuffer.append("\t");
