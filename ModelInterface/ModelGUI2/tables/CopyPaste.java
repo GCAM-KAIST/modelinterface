@@ -99,9 +99,97 @@ public class CopyPaste implements ActionListener{
 		  }
 	  });
 
-
+	  addCopyWithHeaderPopup();
 
     }
+
+	/**
+	 * Attaches a right-click popup menu to the table with entries to copy
+	 * the table contents as tab separated values with the column headers
+	 * included as the first row.  This makes it convenient to paste results
+	 * into a spreadsheet such as Excel.
+	 */
+	private void addCopyWithHeaderPopup() {
+		final JPopupMenu popupMenu = new JPopupMenu();
+		JMenuItem copyAllItem = new JMenuItem("Copy (with header)");
+		copyAllItem.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				copyWithHeader(false);
+			}
+		});
+		popupMenu.add(copyAllItem);
+		JMenuItem copySelectionItem = new JMenuItem("Copy selection (with header)");
+		copySelectionItem.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				copyWithHeader(true);
+			}
+		});
+		popupMenu.add(copySelectionItem);
+		myJTable.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				maybeShowPopup(e);
+			}
+			public void mouseReleased(MouseEvent e) {
+				maybeShowPopup(e);
+			}
+			private void maybeShowPopup(MouseEvent e) {
+				if(e.isPopupTrigger()) {
+					popupMenu.show(e.getComponent(), e.getX(), e.getY());
+				}
+			}
+		});
+	}
+
+	/**
+	 * Copies the table to the system clipboard as tab separated values with
+	 * the column headers as the first row.  Note we can not simply reuse
+	 * BaseTableModel.exportToText since it prepends a title line and adds a
+	 * trailing delimiter to each row which does not paste cleanly, and it
+	 * can not restrict itself to the current selection.
+	 * @param selectionOnly if true only copy the selected rows/columns,
+	 *        falls back to the whole table when there is no selection
+	 */
+	private void copyWithHeader(boolean selectionOnly) {
+		int[] rowsToCopy;
+		int[] colsToCopy;
+		if(selectionOnly && myJTable.getSelectedRowCount() > 0 && myJTable.getSelectedColumnCount() > 0) {
+			rowsToCopy = myJTable.getSelectedRows();
+			colsToCopy = myJTable.getSelectedColumns();
+		} else {
+			rowsToCopy = new int[myJTable.getRowCount()];
+			for(int i = 0; i < rowsToCopy.length; i++) {
+				rowsToCopy[i] = i;
+			}
+			colsToCopy = new int[myJTable.getColumnCount()];
+			for(int j = 0; j < colsToCopy.length; j++) {
+				colsToCopy[j] = j;
+			}
+		}
+		String lineEnding = System.getProperty("line.separator");
+		StringBuffer stringBuffer = new StringBuffer();
+		for(int j = 0; j < colsToCopy.length; j++) {
+			stringBuffer.append(myJTable.getColumnName(colsToCopy[j]));
+			if(j != colsToCopy.length - 1) {
+				stringBuffer.append("\t");
+			}
+		}
+		stringBuffer.append(lineEnding);
+		for(int i = 0; i < rowsToCopy.length; i++) {
+			for(int j = 0; j < colsToCopy.length; j++) {
+				Object value = myJTable.getValueAt(rowsToCopy[i], colsToCopy[j]);
+				if(value != null) {
+					stringBuffer.append(value.toString().replaceAll("[\t\r\n]", " "));
+				}
+				if(j != colsToCopy.length - 1) {
+					stringBuffer.append("\t");
+				}
+			}
+			stringBuffer.append(lineEnding);
+		}
+		StringSelection selection = new StringSelection(stringBuffer.toString());
+		Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
+	}
+
     private BaseTableModel getMyModel() {
 	    if(myJTable.getModel() instanceof TableSorter) {
 		    return (BaseTableModel)((TableSorter)myJTable.getModel()).getTableModel();
