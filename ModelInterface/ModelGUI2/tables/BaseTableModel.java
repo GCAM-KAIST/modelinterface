@@ -661,6 +661,15 @@ public abstract class BaseTableModel extends AbstractTableModel {
      * @param delimiter The text delimiter to use to sperate values.
 	 * @return A String which represents this table.
 	 */
+       /**
+        * Get the title of this table.  For query results this is the name
+        * of the query which produced the table.
+        * @return The title of this table.
+        */
+       public String getTitle() {
+           return title;
+       }
+
        public String exportToText(char delimiter) {
 	       String lineEnding = System.getProperty("line.separator");
            final int regionColNumber = 1;
