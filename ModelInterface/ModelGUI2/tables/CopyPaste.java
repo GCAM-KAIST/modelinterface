@@ -105,20 +105,20 @@ public class CopyPaste implements ActionListener{
 
 	/**
 	 * Attaches a right-click popup menu to the table with entries to copy
-	 * the table contents as tab separated values with the column headers
-	 * included as the first row.  This makes it convenient to paste results
-	 * into a spreadsheet such as Excel.
+	 * the table contents as tab separated values with the query name as the
+	 * first row and the column headers as the second row.  This makes it
+	 * convenient to paste results into a spreadsheet such as Excel.
 	 */
 	private void addCopyWithHeaderPopup() {
 		final JPopupMenu popupMenu = new JPopupMenu();
-		JMenuItem copyAllItem = new JMenuItem("Copy (with header)");
+		JMenuItem copyAllItem = new JMenuItem("Copy");
 		copyAllItem.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				copyWithHeader(false);
 			}
 		});
 		popupMenu.add(copyAllItem);
-		JMenuItem copySelectionItem = new JMenuItem("Copy selection (with header)");
+		JMenuItem copySelectionItem = new JMenuItem("Copy selection");
 		copySelectionItem.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				copyWithHeader(true);
@@ -142,10 +142,10 @@ public class CopyPaste implements ActionListener{
 
 	/**
 	 * Copies the table to the system clipboard as tab separated values with
-	 * the column headers as the first row.  Note we can not simply reuse
-	 * BaseTableModel.exportToText since it prepends a title line and adds a
-	 * trailing delimiter to each row which does not paste cleanly, and it
-	 * can not restrict itself to the current selection.
+	 * the query name as the first row and the column headers as the second
+	 * row.  Note we can not simply reuse BaseTableModel.exportToText since it
+	 * adds a trailing delimiter to each row which does not paste cleanly, and
+	 * it can not restrict itself to the current selection.
 	 * @param selectionOnly if true only copy the selected rows/columns,
 	 *        falls back to the whole table when there is no selection
 	 */
@@ -167,6 +167,10 @@ public class CopyPaste implements ActionListener{
 		}
 		String lineEnding = System.getProperty("line.separator");
 		StringBuffer stringBuffer = new StringBuffer();
+		String queryName = getQueryName();
+		if(queryName != null) {
+			stringBuffer.append(queryName).append(lineEnding);
+		}
 		for(int j = 0; j < colsToCopy.length; j++) {
 			stringBuffer.append(myJTable.getColumnName(colsToCopy[j]));
 			if(j != colsToCopy.length - 1) {
@@ -188,6 +192,26 @@ public class CopyPaste implements ActionListener{
 		}
 		StringSelection selection = new StringSelection(stringBuffer.toString());
 		Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
+	}
+
+	/**
+	 * Get the query name for the table being copied.  This is the title of
+	 * the underlying table model which for query results is the query name.
+	 * Any html markup used for display is stripped and the name is reduced
+	 * to a single line so it pastes as one cell.
+	 * @return The query name, or null if there is none.
+	 */
+	private String getQueryName() {
+		if(!(myJTable.getModel() instanceof BaseTableModel) &&
+				!(myJTable.getModel() instanceof TableSorter)) {
+			return null;
+		}
+		String queryName = getMyModel().getTitle();
+		if(queryName == null) {
+			return null;
+		}
+		queryName = queryName.replaceAll("<[^>]*>", "").replaceAll("[\t\r\n]", " ").trim();
+		return queryName.length() == 0 ? null : queryName;
 	}
 
     private BaseTableModel getMyModel() {
