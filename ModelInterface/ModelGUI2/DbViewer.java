@@ -844,10 +844,15 @@ public class DbViewer implements ActionListener, MenuAdder, BatchRunner {
 		 */
 		private boolean mIsDirty;
 		/**
+		 * Whether scenarios were removed (triggers DB optimization on Done).
+		 */
+		private boolean mIsRemoved;
+		/**
 		 * Constructor which initializes the dirty bit to false.
 		 */
 		public DirtyBit(){
 			mIsDirty = false;
+			mIsRemoved = false;
 		}
 
 		/**
@@ -858,11 +863,27 @@ public class DbViewer implements ActionListener, MenuAdder, BatchRunner {
 		}
 
 		/**
+		 * Set the removed bit (a scenario was deleted, optimization needed).
+		 */
+		public void setRemoved(){
+			mIsDirty = true;
+			mIsRemoved = true;
+		}
+
+		/**
 		 * Get the value of the dirty bit.
 		 * @return Whether the dirty bit is set.
 		 */
 		public boolean isDirty() {
 			return mIsDirty;
+		}
+
+		/**
+		 * Get whether a removal occurred (DB optimization needed).
+		 * @return Whether a scenario was removed.
+		 */
+		public boolean isRemoved() {
+			return mIsRemoved;
 		}
 	}
 
@@ -946,7 +967,7 @@ public class DbViewer implements ActionListener, MenuAdder, BatchRunner {
 				Object[] remList = list.getSelectedValues();
 				filterDialog.getGlassPane().setVisible(true);
 				for(int i = 0; i < remList.length; ++i) {
-					dirtyBit.setDirty();
+					dirtyBit.setRemoved();
 					XMLDB.getInstance().removeDoc(((ScenarioListItem)remList[i]).getDocName());
 				}
 				scns = getScenarios();
@@ -1111,14 +1132,52 @@ public class DbViewer implements ActionListener, MenuAdder, BatchRunner {
 		});
 		doneButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if(dirtyBit.isDirty()) {
+				if(dirtyBit.isRemoved()) {
+					// Scenarios were deleted: run DB optimization with progress bar
+					final JProgressBar progBar = new JProgressBar(0, 100);
+					progBar.setStringPainted(true);
+					final JDialog jd = XMLDB.createProgressBarGUI(progBar, "Optimizing Database",
+							"Cleaning up deleted scenarios...");
+					// Timer increments bar from 0 → 90% while optimization runs
+					final javax.swing.Timer progTimer = new javax.swing.Timer(200, null);
+					progTimer.addActionListener(new ActionListener() {
+						public void actionPerformed(ActionEvent te) {
+							int val = progBar.getValue();
+							if(val < 90) {
+								progBar.setValue(val + 2);
+							} else {
+								progTimer.stop();
+							}
+						}
+					});
+					progTimer.start();
+					new Thread(new Runnable() {
+						public void run() {
+							XMLDB.getInstance().optimizeAll();
+							scns = getScenarios();
+							SwingUtilities.invokeLater(new Runnable() {
+								public void run() {
+									progTimer.stop();
+									progBar.setValue(100);
+									scnList.setListData(scns);
+									regions = getRegions();
+									regionList.setListData(regions);
+									jd.setVisible(false);
+									filterDialog.setVisible(false);
+								}
+							});
+						}
+					}).start();
+				} else if(dirtyBit.isDirty()) {
 					// meta data now set on demand
 					//xmlDB.addVarMetaData(parentFrame);
 					scnList.setListData(scns);
 					regions = getRegions();
 					regionList.setListData(regions);
+					filterDialog.setVisible(false);
+				} else {
+					filterDialog.setVisible(false);
 				}
-				filterDialog.setVisible(false);
 			}
 		});
 
