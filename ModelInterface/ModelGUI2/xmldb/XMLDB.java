@@ -235,8 +235,6 @@ public class XMLDB {
 	        new Delete(docName).execute(context);
 	    } catch(BaseXException e) {
 	        e.printStackTrace();
-	    } catch(Exception e) {
-	        e.printStackTrace();
 	    }
 	}
 	public void optimizeAll() {
