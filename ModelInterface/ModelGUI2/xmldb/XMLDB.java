@@ -54,6 +54,7 @@ import org.basex.core.cmd.CreateDB;
 import org.basex.core.cmd.Close;
 import org.basex.core.cmd.Add;
 import org.basex.core.cmd.Delete;
+import org.basex.core.cmd.OptimizeAll;
 import org.basex.io.IO;
 import org.basex.query.QueryProcessor;
 import org.basex.query.QueryException;
@@ -229,14 +230,22 @@ public class XMLDB {
 	    }
 	}
 	public void removeDoc(String docName) {
-		try {
-			System.out.println("Removing :"+docName);
-            new Delete(docName).execute(context);
-		} catch(BaseXException e) {
-			e.printStackTrace();
-		}
+	    try {
+	        System.out.println("Removing :"+docName);
+	        new Delete(docName).execute(context);
+	    } catch(BaseXException e) {
+	        e.printStackTrace();
+	    } catch(Exception e) {
+	        e.printStackTrace();
+	    }
 	}
-	
+	public void optimizeAll() {
+	    try {
+	        new OptimizeAll().execute(context);
+	    } catch(BaseXException e) {
+	        e.printStackTrace();
+	    }
+	}
 	/**
 	 * Export a document to a text file.
 	 * @param aDocName Name of the document to export.
